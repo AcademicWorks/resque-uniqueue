@@ -10,7 +10,7 @@ Gem::Specification.new do |s|
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Aaron Scruggs"]
   s.date = "2013-05-27"
-  s.description = "TODO: longer description of your gem"
+  s.description = "Unique Resque queues using redis 1.6.0 scripting, sets and not much else"
   s.email = "aaron@scrug.gs"
   s.extra_rdoc_files = [
     "LICENSE.txt",
@@ -30,11 +30,11 @@ Gem::Specification.new do |s|
     "test/helper.rb",
     "test/test_resque-uniqueue.rb"
   ]
-  s.homepage = "http://github.com/ascruggs/resque-uniqueue"
+  s.homepage = "http://github.com/AcademicWorks/resque-uniqueue"
   s.licenses = ["MIT"]
   s.require_paths = ["lib"]
   s.rubygems_version = "1.8.25"
-  s.summary = "TODO: one-line summary of your gem"
+  s.summary = "Unique Resque queues using redis 1.6.0 scripting, sets and not much else"
 
   if s.respond_to? :specification_version then
     s.specification_version = 3
