@@ -26,6 +26,7 @@ Gem::Specification.new do |s|
     "VERSION",
     "lib/resque-uniqueue.rb",
     "lib/resque/uniqueue.rb",
+    "resque-uniqueue.gemspec",
     "test/helper.rb",
     "test/test_resque-uniqueue.rb"
   ]
