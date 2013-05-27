@@ -15,10 +15,10 @@ require 'jeweler'
 Jeweler::Tasks.new do |gem|
   # gem is a Gem::Specification... see http://docs.rubygems.org/read/chapter/20 for more options
   gem.name = "resque-uniqueue"
-  gem.homepage = "http://github.com/ascruggs/resque-uniqueue"
+  gem.homepage = "http://github.com/AcademicWorks/resque-uniqueue"
   gem.license = "MIT"
-  gem.summary = %Q{TODO: one-line summary of your gem}
-  gem.description = %Q{TODO: longer description of your gem}
+  gem.summary = %Q{Unique Resque queues using redis 1.6.0 scripting, sets and not much else }
+  gem.description = %Q{Unique Resque queues using redis 1.6.0 scripting, sets and not much else}
   gem.email = "aaron@scrug.gs"
   gem.authors = ["Aaron Scruggs"]
   # dependencies defined in Gemfile
