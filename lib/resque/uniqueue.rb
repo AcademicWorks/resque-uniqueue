@@ -28,10 +28,9 @@ module Resque
         local set_name = list_name..':uniqueue'
         local in_set = redis.call('sadd', set_name , ARGV[1])
         if in_set == 1 then
-          redis.call('rpush', list_name, ARGV[1])
-          return in_set
+          return redis.call('rpush', list_name, ARGV[1])
         end
-        return in_set
+        return false
       LUA
     end
 

@@ -236,6 +236,16 @@ class TestResqueUniqueue < Test::Unit::TestCase
           assert_equal Resque.redis.scard('priority_10:uniqueue'), 1
         end
 
+        should "return queue length if unique job" do
+          assert_equal Resque.push('priority_10', {'name' => 'bob'}), 1
+          assert_equal Resque.push('priority_10', {'name' => 'robert'}), 2
+        end
+
+        should "return nil if duplicate job" do
+          assert_equal Resque.push('priority_10', {'name' => 'bob'}), 1
+          assert_nil Resque.push('priority_10', {'name' => 'bob'})
+        end
+
       end
 
       context "pop_unique" do
