@@ -11,14 +11,21 @@ module Resque
       unique_queue?(queue) ? pop_unique(queue)        : super
     end
 
+    def remove_queue(queue)
+      super(queue)
+      redis.del("queue:#{queue}:uniqueue")
+    end
+
     def push_unique(queue, item)
       confirm_unique_queue_validity(queue)
       watch_queue(queue)
+      queue = "queue:#{queue}"
       redis.evalsha push_unique_eval_sha, [queue], [encode(item)]
     end
 
     def pop_unique(queue)
       confirm_unique_queue_validity(queue)
+      queue = "queue:#{queue}"
       decode redis.evalsha pop_unique_eval_sha, [queue]
     end
 

@@ -143,6 +143,32 @@ class TestResqueUniqueue < Test::Unit::TestCase
 
     end
 
+    context 'remove_queue' do
+
+      setup do
+        Resque.redis.flushall
+        Resque.unique_queues!
+        Resque.unique_queues= ['priority_10']
+      end
+
+      should 'work for normal queues' do
+        Resque.push('priority_20', {'name' => 'bob'})
+        assert Resque.redis.exists('queue:priority_20')
+        Resque.remove_queue('priority_20')
+        refute Resque.redis.exists 'queue:priority_20'
+      end
+
+      should 'work for unique queues' do
+        Resque.push('priority_10', {'name' => 'bob'})
+        assert Resque.redis.exists('queue:priority_10')
+        assert Resque.redis.exists('queue:priority_10:uniqueue')
+        Resque.remove_queue('priority_10')
+        refute Resque.redis.exists 'queue:priority_10'
+        refute Resque.redis.exists 'queue:priority_10:uniqueue'
+      end
+
+    end
+
     context "unique queues" do
 
       setup do
@@ -214,26 +240,26 @@ class TestResqueUniqueue < Test::Unit::TestCase
       context 'push_unique' do
 
         should 'create set & list if they do not exist' do
-          refute Resque.redis.exists 'priority_10'
-          refute Resque.redis.exists 'priority_10:uniqueue'
+          refute Resque.redis.exists 'queue:priority_10'
+          refute Resque.redis.exists 'queue:priority_10:uniqueue'
           Resque.push('priority_10', {'name' => 'bob'})
-          assert Resque.redis.exists 'priority_10'
-          assert Resque.redis.exists 'priority_10:uniqueue'
+          assert Resque.redis.exists 'queue:priority_10'
+          assert Resque.redis.exists 'queue:priority_10:uniqueue'
         end
 
         should "add items to set and list if message unique" do
           Resque.push('priority_10', {'name' => 'bob'})
-          assert_equal Resque.redis.llen('priority_10'), 1
-          assert_equal Resque.redis.scard('priority_10:uniqueue'), 1
+          assert_equal Resque.redis.llen('queue:priority_10'), 1
+          assert_equal Resque.redis.scard('queue:priority_10:uniqueue'), 1
         end
 
         should "not add item to queue if already on there" do
           Resque.push('priority_10', {'name' => 'bob'})
-          assert_equal Resque.redis.llen('priority_10'), 1
-          assert_equal Resque.redis.scard('priority_10:uniqueue'), 1
+          assert_equal Resque.redis.llen('queue:priority_10'), 1
+          assert_equal Resque.redis.scard('queue:priority_10:uniqueue'), 1
           Resque.push('priority_10', {'name' => 'bob'})
-          assert_equal Resque.redis.llen('priority_10'), 1
-          assert_equal Resque.redis.scard('priority_10:uniqueue'), 1
+          assert_equal Resque.redis.llen('queue:priority_10'), 1
+          assert_equal Resque.redis.scard('queue:priority_10:uniqueue'), 1
         end
 
       end
@@ -256,19 +282,16 @@ class TestResqueUniqueue < Test::Unit::TestCase
 
         should 'remove job from list and set' do
           Resque.push('priority_10', {'name' => 'bob'})
-          assert_equal Resque.redis.llen('priority_10'), 1
-          assert_equal Resque.redis.scard('priority_10:uniqueue'), 1
+          assert_equal Resque.redis.llen('queue:priority_10'), 1
+          assert_equal Resque.redis.scard('queue:priority_10:uniqueue'), 1
           Resque.pop('priority_10')
-          assert_equal Resque.redis.llen('priority_10'), 0
-          assert_equal Resque.redis.scard('priority_10:uniqueue'), 0
+          assert_equal Resque.redis.llen('queue:priority_10'), 0
+          assert_equal Resque.redis.scard('queue:priority_10:uniqueue'), 0
         end
 
       end
 
     end
-
-
-
 
   end
 
