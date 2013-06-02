@@ -195,14 +195,25 @@ class TestResqueUniqueue < Test::Unit::TestCase
         Resque.redis.flushall
       end
 
-      should "return true if set length and list length are the same" do
+      should "return true if queue, uniqueue & start_at length are the same" do
         Resque.redis.sadd   "priority_10:uniqueue", "test"
         Resque.redis.rpush  "priority_10", "test"
+        Resque.redis.rpush  "priority_10:start_at", "test"
         Resque.confirm_unique_queue_validity("priority_10")
       end
 
-      should 'raise exception if length of set and list differ' do
+      should 'raise exception if length of queue is off' do
         Resque.redis.rpush  "priority_10", "test"
+        assert_raises(RuntimeError){ Resque.confirm_unique_queue_validity("priority_10") }
+      end
+
+      should 'raise exception if length of uniqueue is off' do
+        Resque.redis.sadd  "priority_10:uniqueue", "test"
+        assert_raises(RuntimeError){ Resque.confirm_unique_queue_validity("priority_10") }
+      end
+
+      should 'raise exception if length of start_at is off' do
+        Resque.redis.rpush  "priority_10:start_at", "test"
         assert_raises(RuntimeError){ Resque.confirm_unique_queue_validity("priority_10") }
       end
 
@@ -257,9 +268,11 @@ class TestResqueUniqueue < Test::Unit::TestCase
           Resque.push('priority_10', {'name' => 'bob'})
           assert_equal Resque.redis.llen('queue:priority_10'), 1
           assert_equal Resque.redis.scard('queue:priority_10:uniqueue'), 1
+          assert_equal Resque.redis.llen('queue:priority_10:start_at'), 1
           Resque.push('priority_10', {'name' => 'bob'})
           assert_equal Resque.redis.llen('queue:priority_10'), 1
           assert_equal Resque.redis.scard('queue:priority_10:uniqueue'), 1
+          assert_equal Resque.redis.llen('queue:priority_10:start_at'), 1
         end
 
         should "return queue length if unique job" do
@@ -272,6 +285,18 @@ class TestResqueUniqueue < Test::Unit::TestCase
           assert_nil Resque.push('priority_10', {'name' => 'bob'})
         end
 
+        should 'create start_at list if does not exist' do
+          refute Resque.redis.exists 'queue:priority_10:start_at'
+          Resque.push('priority_10', {'name' => 'bob'})
+          assert Resque.redis.exists 'queue:priority_10:start_at'
+        end
+
+        should 'add current time to start_at list' do
+          Resque.push_unique('priority_10', {'name' => 'bob'}, 1370213794)
+          assert_equal Resque.redis.llen('queue:priority_10:start_at'), 1
+          assert_equal Resque.redis.rpop('queue:priority_10:start_at').to_i, 1370213794
+        end
+
       end
 
       context "pop_unique" do
@@ -281,7 +306,8 @@ class TestResqueUniqueue < Test::Unit::TestCase
           job = Resque.pop('priority_20')
           Resque.push('priority_10', {'name' => 'bob'})
           uniqueue_job = Resque.pop('priority_10')
-          assert_equal job, uniqueue_job
+          assert_equal job['name'], 'bob'
+          assert_equal job['name'], uniqueue_job['name']
         end
 
         should "return same item whether unique queue or not when queue is empty" do
@@ -297,6 +323,19 @@ class TestResqueUniqueue < Test::Unit::TestCase
           Resque.pop('priority_10')
           assert_equal Resque.redis.llen('queue:priority_10'), 0
           assert_equal Resque.redis.scard('queue:priority_10:uniqueue'), 0
+        end
+
+        should 'remove current time from start_at list' do 
+          Resque.push_unique('priority_10', {'name' => 'bob'}, 1370213794)
+          assert_equal Resque.redis.llen('queue:priority_10:start_at'), 1
+          Resque.pop('priority_10')
+          assert_equal Resque.redis.llen('queue:priority_10:start_at'), 0
+        end
+
+        should 'return start_at as part of job hash' do 
+          Resque.push_unique('priority_10', {'name' => 'bob'}, 1370213794)
+          job = Resque.pop('priority_10')
+          assert_equal job['start_at'], 1370213794
         end
 
       end

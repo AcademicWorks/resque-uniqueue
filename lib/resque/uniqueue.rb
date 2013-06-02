@@ -16,26 +16,32 @@ module Resque
       redis.del("queue:#{queue}:uniqueue")
     end
 
-    def push_unique(queue, item)
+    def push_unique(queue, item, time = Time.now.utc.to_i)
       confirm_unique_queue_validity(queue)
       watch_queue(queue)
       queue = "queue:#{queue}"
-      redis.evalsha push_unique_eval_sha, [queue], [encode(item)]
+      redis.evalsha push_unique_eval_sha, [queue], [encode(item), time]
     end
 
     def pop_unique(queue)
       confirm_unique_queue_validity(queue)
       queue = "queue:#{queue}"
-      decode redis.evalsha pop_unique_eval_sha, [queue]
+      results = redis.evalsha pop_unique_eval_sha, [queue]
+      return nil unless results[0]
+      job = decode results[0]
+      job['start_at'] = results[1].to_i
+      return job
     end
 
     def push_unique_eval_sha
       @push_unique_eval_sha ||= load_script <<-LUA
-        local list_name = KEYS[1]
-        local set_name = list_name..':uniqueue'
-        local in_set = redis.call('sadd', set_name , ARGV[1])
+        local queue_name = KEYS[1]
+        local uniqueue_name = queue_name..':uniqueue'
+        local start_at_name = queue_name..':start_at'
+        local in_set = redis.call('sadd', uniqueue_name , ARGV[1])
         if in_set == 1 then
-          return redis.call('rpush', list_name, ARGV[1])
+          redis.call('rpush', start_at_name, ARGV[2])
+          return redis.call('rpush', queue_name, ARGV[1])
         end
         return false
       LUA
@@ -43,21 +49,31 @@ module Resque
 
     def pop_unique_eval_sha
       @pop_unique_eval_sha  ||= load_script <<-LUA
-        local list_name = KEYS[1]
-        local set_name = list_name..':uniqueue'
-        local job = redis.call('lpop', list_name)
-        redis.call('srem', set_name, job)
-        return job
+        local queue_name = KEYS[1]
+        local uniqueue_name = queue_name..':uniqueue'
+        local start_at_name = queue_name..':start_at'
+        local results = {}
+        results[1] = redis.call('lpop', queue_name)
+        results[2] = redis.call('lpop', start_at_name)
+        redis.call('srem', uniqueue_name, results[1])
+        return results
       LUA
     end
 
     def queue_and_set_length_equal_eval_sha
       @queue_and_set_length_equal_eval_sha ||= load_script <<-LUA
-        local list_name = KEYS[1]
-        local set_name = list_name..':uniqueue'
-        local list_size = redis.call('llen', list_name)
-        local set_size = redis.call('scard', set_name)
-        return list_size == set_size
+        local queue_name = KEYS[1]
+        local uniqueue_name = queue_name..':uniqueue'
+        local start_at_name = queue_name..':start_at'
+        local queue_size = redis.call('llen', queue_name)
+        local uniqueue_size = redis.call('scard', uniqueue_name)
+        local start_at_size = redis.call('llen', start_at_name)
+        if queue_size == uniqueue_size then
+          if queue_size == start_at_size then
+            return true
+          end
+        end
+        return false
       LUA
     end
 
