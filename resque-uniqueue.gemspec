@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = "resque-uniqueue"
-  s.version = "0.2.0"
+  s.version = "0.2.1"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Aaron Scruggs"]
-  s.date = "2013-06-02"
+  s.date = "2013-06-09"
   s.description = "Unique Resque queues using redis 1.6.0 scripting, sets and not much else"
   s.email = "aaron@scrug.gs"
   s.extra_rdoc_files = [
