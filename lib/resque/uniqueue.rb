@@ -14,22 +14,23 @@ module Resque
     def remove_queue(queue)
       super(queue)
       redis.del("queue:#{queue}:uniqueue")
+      redis.del("queue:#{queue}:start_at")
     end
 
     def push_unique(queue, item, time = Time.now.utc.to_i)
-      confirm_unique_queue_validity(queue)
       watch_queue(queue)
       queue = "queue:#{queue}"
+      confirm_unique_queue_validity(queue)
       redis.evalsha push_unique_eval_sha, [queue], [encode(item), time]
     end
 
     def pop_unique(queue)
-      confirm_unique_queue_validity(queue)
       queue = "queue:#{queue}"
+      confirm_unique_queue_validity(queue)
       results = redis.evalsha pop_unique_eval_sha, [queue]
       return nil unless results[0]
       job = decode results[0]
-      job['start_at'] = results[1].to_i
+      job['start_at'] ||= results[1].to_i
       return job
     end
 
