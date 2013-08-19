@@ -52,10 +52,6 @@ class TestResqueUniqueue < Test::Unit::TestCase
       Resque.stubs(:queues).returns(['priority_10'])
     end
 
-    should "default to all queues if non set" do      
-      assert_equal Resque.unique_queues, ['priority_10']
-    end
-
     should "be able to set specific queue list" do
       Resque.unique_queues = ['priority_20']
       assert_equal Resque.unique_queues, ['priority_20']
@@ -65,15 +61,27 @@ class TestResqueUniqueue < Test::Unit::TestCase
 
   context "deteriming if a queue is unique" do
 
-    setup do
-      Resque.unique_queues = ['priority_10']
-    end
-
     should "no be unique if gem not enabled" do
+      Resque.unique_queues = ['priority_10']
       refute Resque.unique_queue?('priority_10')
     end
 
-    should "be have unique queues when enabled" do
+    should "have unique queues when queue list set" do
+      
+      Resque.stubs(:confirm_compatible_redis_version).returns true
+      Resque.unique_queues!
+      Resque.unique_queues = ['priority_10']
+      assert Resque.unique_queue?('priority_10')
+    end
+
+    should "only set queues are unique" do
+      Resque.stubs(:confirm_compatible_redis_version).returns true
+      Resque.unique_queues!
+      Resque.unique_queues = ['priority_10']
+      refute Resque.unique_queue?('priority_20')
+    end
+
+    should "make all queues unique by default" do
       Resque.stubs(:confirm_compatible_redis_version).returns true
       Resque.unique_queues!
       assert Resque.unique_queue?('priority_10')

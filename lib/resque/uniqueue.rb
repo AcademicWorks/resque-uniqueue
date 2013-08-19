@@ -91,13 +91,15 @@ module Resque
     end
 
     #is this queue a unique queue
+    #if you have uniqueue turned on and no queues are set, its assumes all queues are unique
     def unique_queue?(queue)
-      unique_queues? && unique_queues.include?(queue)
+      return false unless unique_queues?
+      !unique_queues || unique_queues.include?(queue)
     end
 
     #list the unique queues
     def unique_queues
-      @unique_queues || queues
+      @unique_queues
     end
 
     #set a specific list of unique queues
