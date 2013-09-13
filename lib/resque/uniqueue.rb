@@ -1,12 +1,12 @@
-require 'resque'
+require "resque"
 
 module Resque
   module Uniqueue
-    
+
     def push(queue, item)
       unique_queue?(queue) ? push_unique(queue, item) : super
     end
-    
+
     def pop(queue)
       unique_queue?(queue) ? pop_unique(queue)        : super
     end
@@ -30,7 +30,7 @@ module Resque
       results = redis.evalsha pop_unique_eval_sha, [queue]
       return nil unless results[0]
       job = decode results[0]
-      job['start_at'] ||= results[1].to_i
+      job["start_at"] ||= results[1].to_i
       return job
     end
 
@@ -39,8 +39,8 @@ module Resque
         local queue_name = KEYS[1]
         local uniqueue_name = queue_name..':uniqueue'
         local start_at_name = queue_name..':start_at'
-        local in_set = redis.call('sadd', uniqueue_name , ARGV[1])
-        if in_set == 1 then
+        local not_in_set = redis.call('sadd', uniqueue_name , ARGV[1])
+        if not_in_set == 1 then
           redis.call('rpush', start_at_name, ARGV[2])
           return redis.call('rpush', queue_name, ARGV[1])
         end
@@ -84,7 +84,7 @@ module Resque
 
     #if the queue and set sizes differ, something is very wrong and we should fail loudly
     def confirm_unique_queue_validity(queue)
-      response =  redis.evalsha queue_and_set_length_equal_eval_sha, [queue]
+      response = redis.evalsha queue_and_set_length_equal_eval_sha, [queue]
       return true if response == 1
       #TODO raise specific exception
       raise "Make sure your queues are empty before you start using uniqueue"
@@ -120,7 +120,7 @@ module Resque
 
     def confirm_compatible_redis_version
       redis_version = redis.info["redis_version"]
-      major, minor, patch = redis_version.split('.').map(&:to_i)
+      major, minor, patch = redis_version.split(".").map(&:to_i)
       if major < 2 || minor < 6
         #TODO raise specific exception
         raise "Redis version must be at least 2.6.0 you are running #{redis_version}"
