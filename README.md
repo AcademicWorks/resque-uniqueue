@@ -1,40 +1,50 @@
 # resque-uniqueue
 
+### Why use Uniqueue?
+
 Multiple identical jobs are wasteful. Uniqueue ensures that *for a given queue*, identical jobs are never enqueued, and you can stress a little less about your application code causing duplicate work.
 
-**Note:** Uniqueue uses Lua scripting, which requires Redis 2.6 or greater.
+### Prerequisites
+Uniqueue uses Lua scripting, which requires **Redis 2.6 or greater**, so make sure your Redis installation is up to date.
 
-### Usage
+Before deploying an application with Uniqueue enabled for the first time, it's important that you **ensure your queues are empty**.
 
-    # somewhere in your application initialization:
-    Resque.unique_queues = ["unique", "queues"]  # this step is optional, Uniqueue defaults to all queues
+### Installation
+Add Uniqueue to your Gemfile.
+
+    gem 'resque-uniqueue'
+    
+Then run bundle install within your app's directory.
+
+### Configuration
+You'll need to configure Uniqueue somewhere in your application's initialization process. If you are running a Rails application it's recommended you use your Resque initializer:
+
+    # config/initializers/resque.rb
     Resque.unique_queues!
 
-Usage is dead simple:
+#### Specifying queues 
+By default Uniqueue defaults to preventing identical jobs on all queues. However, if you need to scope Uniqueue to specific queues, then your intializer code should look like this:
 
-1. Ensure you're running Redis 2.6 or greater
-2. Make sure your queues are totally empty
-3. Enable Uniqueue in application code
-4. Restart your app
-
-In addition, you can optionally set only particular queues to be unique, but Uniqueue will default to ensuring all queues are unique.
+    # config/initializers/resque.rb
+    Resque.unique_queues = ["emails", "orders"] 
+    Resque.unique_queues!
 
 ### How It Works
 
-Uniqueue overrides 3 resque commands: `push`, `pop`, and `remove_queue` in order to enforce *queue-level uniqueness* of jobs. And for each queue, two additional Redis keys are created:
+Uniqueue overrides 3 resque commands: `push`, `pop`, and `remove_queue` in order to enforce *queue-level uniqueness* of jobs. And for each queue two additional Redis keys are created:
 
 1. `queue:[queue_name]:uniqueue` - A **set** containing MultiJSON dumps of the payload of all items on the queue
 2. `queue:[queue_name]:start_at` - A **list** containing the Unix timestamp of each job on the queue's start time, ordered identically to the actual job queue
 
-Then, when Resque pushes a job, the following happens:
+Now when Resque pushes a job the following happens:
 
 1. The length/cardinality of the queue, uniqueue set, and start_at list are verified to be equal. If they aren't, stuff has gone bad, and you'll get an exception.
 2. A Lua script is evaluated that executes `sadd` on the payload (well, a MultiJSON dump of it), which will add it to the uniqueue set if it is not already a member.
 3. If the payload's dump was not previously stored in the set, we `rpush` the start time of the job to the start_at list and `rpush` the job to the queue (following the lead of Resque's default `push` command).
 
-Because the three operations happen in the context of a Lua script, atomicity is guaranteed (See "Atomicity of Scripts" [here][eval]), and race conditions can never cause the uniqueue set, start_at list, and original queue to get out of sync. And, for each unique job, we now successfully have the job queued, its payload present in our uniqueue set, and its start_at on a list that corresponds exactly to the order of the queue list.
+Because the three operations happen in the context of a Lua script, atomicity is guaranteed (See "Atomicity of Scripts" [here][eval]), and race conditions can never cause the uniqueue set, start_at list, and original queue to get out of sync. Each unique job is now successfully queued, its payload is present in our uniqueue set, and its start_at timestamp is on a list that corresponds exactly to the order of the queue list.
 
-And popping a job is very similar:
+Popping a job is very similar:
 
 1. Lengths and cardinalities are verified.
 2. MultiJSON load the payload.
