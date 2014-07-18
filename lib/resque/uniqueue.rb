@@ -20,7 +20,7 @@ module Resque
     def push_unique(queue, item, time = Time.now.utc.to_i)
       watch_queue(queue)
       queue = "queue:#{queue}"
-      confirm_unique_queue_validity(queue)
+
       redis.evalsha push_unique_eval_sha, [queue], [encode(item), time]
     end
 
