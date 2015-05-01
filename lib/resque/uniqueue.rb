@@ -121,7 +121,7 @@ module Resque
     def confirm_compatible_redis_version
       redis_version = redis.info["redis_version"]
       major, minor, patch = redis_version.split(".").map(&:to_i)
-      if major < 2 || minor < 6
+      if major < 2 || (major == 2 && minor < 6)
         #TODO raise specific exception
         raise "Redis version must be at least 2.6.0 you are running #{redis_version}"
       end
