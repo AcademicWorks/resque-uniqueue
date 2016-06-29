@@ -56,7 +56,9 @@ module Resque
         local results = {}
         results[1] = redis.call('lpop', queue_name)
         results[2] = redis.call('lpop', start_at_name)
-        redis.call('srem', uniqueue_name, results[1])
+        if results[1] then
+          redis.call('srem', uniqueue_name, results[1])
+        end
         return results
       LUA
     end
