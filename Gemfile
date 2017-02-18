@@ -14,5 +14,6 @@ group :development do
   gem "bundler", ">= 1.5.0"
   gem "jeweler", "~> 1.8.4"
   gem "pry"
+  gem "test-unit"
 end
 
